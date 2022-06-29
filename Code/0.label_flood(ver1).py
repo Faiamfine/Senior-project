@@ -1,16 +1,17 @@
-import cv2
-import time
-import matplotlib.pyplot as plt
-import time
-import numpy as np
 import os
+import time
 
-#to collect label
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+
+# to collect label
 flood = list()
 nonflood = list()
-#filename
+# filename
 file_flood = list()
 file_nonflood = list()
+
 
 def get_roi(img):
     global image
@@ -18,9 +19,9 @@ def get_roi(img):
     clone = image.copy()
     window_width = int(img.shape[1] * 0.5)
     window_height = int(img.shape[0] * 0.5)
-    
+
     cv2.namedWindow("image", cv2.WINDOW_AUTOSIZE)
-    cv2.resizeWindow('image', window_width, window_height)
+    cv2.resizeWindow("image", window_width, window_height)
     # keep looping until the 'q' key is pressed
     while True:
         # display the image and wait for a keypress
@@ -30,30 +31,30 @@ def get_roi(img):
         if key == ord("c"):
             break
         elif key == ord("1"):
-            label = 'flood'
+            label = "flood"
             break
         elif key == ord("0"):
-            label = 'non-flooded'
+            label = "non-flooded"
             break
         elif key == ord("q"):
-            label = 'exit'
+            label = "exit"
             break
     return label
-    
+
     # label = None
     # try:
-        
-         
+
+
 def plt_imshow(img):
     plt.imshow(img)
     plt.show()
-      
+
 
 # plt_imshow(image1)
-count_n = np.random.randint(100000,size=1)[0]
-count_y = np.random.randint(100000,size=1)[0]
-base_dir = 'D:\Faii'#path for label and visualize
-folder_dir = os.path.join(base_dir,'crop_im_for_visualize') 
+count_n = np.random.randint(100000, size=1)[0]
+count_y = np.random.randint(100000, size=1)[0]
+base_dir = "D:\Faii"  # path for label and visualize
+folder_dir = os.path.join(base_dir, "crop_im_for_visualize")
 # print(folder_dir)
 
 for img_name in os.listdir(folder_dir):
@@ -62,17 +63,17 @@ for img_name in os.listdir(folder_dir):
     print(img_path)
 
     while True:
-        label = get_roi(image1) 
-        if 'flood' in label.lower():
-            count_n +=1 
-            dir = r'D:\Faii\label-flood'
+        label = get_roi(image1)
+        if "flood" in label.lower():
+            count_n += 1
+            dir = r"D:\Faii\label-flood"
             filepath = os.path.join(dir, str(count_n))
             print(filepath)
             flood.append(label)
             file_flood.append(filepath)
-        elif 'nonflood' in label.lower(): 
-            count_y +=1
-            dir = r'D:\Faii\label-nonflood'
+        elif "nonflood" in label.lower():
+            count_y += 1
+            dir = r"D:\Faii\label-nonflood"
             filepath = os.path.join(dir, str(count_y))
             print(filepath)
             nonflood.append(label)
@@ -80,4 +81,3 @@ for img_name in os.listdir(folder_dir):
         else:
             break
         print()
-    

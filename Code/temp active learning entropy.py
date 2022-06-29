@@ -4,29 +4,31 @@ Created on Thu Mar 31 21:43:43 2022
 
 @author: Teerasit_com4
 """
-import os
 import io
-import cv2
+import os
 import pickle
 import random
-import scipy.stats
-import numpy as np
-from tqdm import tqdm
-import tensorflow as tf
-from tensorflow import keras
-from scipy.stats import entropy
+
+import cv2
 import matplotlib.pyplot as plt
-from tensorflow.keras import layers
-from tensorflow.keras import backend as K
-from sklearn.preprocessing import StandardScaler
-from tensorflow.keras.utils import to_categorical
+import numpy as np
+import scipy.stats
+import tensorflow as tf
+from scipy.stats import entropy
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from tensorflow import keras
+from tensorflow.keras import backend as K
+from tensorflow.keras import layers
 from tensorflow.keras.applications import ResNet50V2
+from tensorflow.keras.utils import to_categorical
+from tqdm import tqdm
+
+
 # %%
 def make_model(input_shape):
     # ResNet Model
-    base_model = ResNet50V2(
-        include_top=False, weights=None, input_shape=input_shape)
+    base_model = ResNet50V2(include_top=False, weights=None, input_shape=input_shape)
 
     # Connect layers
     inputs = keras.Input(shape=(input_shape[0], input_shape[1], 3))
@@ -43,20 +45,18 @@ def make_model(input_shape):
 
 def get_callbacks():
     model_checkpoint = keras.callbacks.ModelCheckpoint(
-        os.path.join(r'D:\Faii\Dataset_flood\model',
-                     "activelearning-entropy-resnet50v2.h5"),
-        monitor='val_loss',
-        mode='min',
-        save_best_only=True
+        os.path.join(
+            r"D:\Faii\Dataset_flood\model", "activelearning-entropy-resnet50v2.h5"
+        ),
+        monitor="val_loss",
+        mode="min",
+        save_best_only=True,
     )
     reduce_lr = keras.callbacks.ReduceLROnPlateau(
-        monitor='val_loss', factor=0.5,  
-        patience=6, min_lr=1e-6, verbose=1
+        monitor="val_loss", factor=0.5, patience=6, min_lr=1e-6, verbose=1
     )
     early = keras.callbacks.EarlyStopping(
-        monitor='val_loss',
-        patience=15,
-        restore_best_weights=True
+        monitor="val_loss", patience=15, restore_best_weights=True
     )
     return model_checkpoint, reduce_lr, early
 
@@ -95,37 +95,46 @@ def get_callbacks():
 # np.save(r"D:\Faii\Dataset_flood\dataset-input-output-for training\img_name.npy", list_name)
 # %%
 for i in range(11, 21):
-    print(f'round[{i}]')
-    x_pool = np.load(r"D:\Faii\Dataset_flood\dataset-input-output-for training\X.npy")[:, :, :, :3]
+    print(f"round[{i}]")
+    x_pool = np.load(r"D:\Faii\Dataset_flood\dataset-input-output-for training\X.npy")[
+        :, :, :, :3
+    ]
     y_pool = np.load(r"D:\Faii\Dataset_flood\dataset-input-output-for training\y.npy")
-    name_pool = np.load(r"D:\Faii\Dataset_flood\dataset-input-output-for training\img_name.npy")
+    name_pool = np.load(
+        r"D:\Faii\Dataset_flood\dataset-input-output-for training\img_name.npy"
+    )
     shuffle_index = np.random.permutation(len(x_pool))
 
     x_pool = x_pool[shuffle_index]
     y_pool = y_pool[shuffle_index]
     # %%
     scaler = StandardScaler()
-    x_pool = scaler.fit_transform(
-        x_pool.reshape(-1, x_pool.shape[-1])).reshape(x_pool.shape)
+    x_pool = scaler.fit_transform(x_pool.reshape(-1, x_pool.shape[-1])).reshape(
+        x_pool.shape
+    )
 
     num_train = 100
     num_validate = 400
-    x_train = x_pool[num_validate:num_validate+num_train]
-    y_train = y_pool[num_validate:num_validate+num_train]
+    x_train = x_pool[num_validate : num_validate + num_train]
+    y_train = y_pool[num_validate : num_validate + num_train]
     x_val = x_pool[0:num_validate]
     y_val = y_pool[0:num_validate]
     # delete validate samples out
-    x_pool = x_pool[num_validate+num_train:]
-    y_pool = y_pool[num_validate+num_train:]
-# %% Complie and save initial model
+    x_pool = x_pool[num_validate + num_train :]
+    y_pool = y_pool[num_validate + num_train :]
+    # %% Complie and save initial model
     model = make_model(input_shape=(200, 200, 3))
     model.compile(
         optimizer=keras.optimizers.Adam(1e-4),
         loss="binary_crossentropy",
         metrics=["accuracy"],
     )
-    model.save_weights(os.path.join(r'D:\Faii\Dataset_flood\model',
-                       "activelearning-entropy-resnet50v2(initial).h5"))
+    model.save_weights(
+        os.path.join(
+            r"D:\Faii\Dataset_flood\model",
+            "activelearning-entropy-resnet50v2(initial).h5",
+        )
+    )
     # %% Define active learning parameters
     num_add = 50
     num_iter = 15
@@ -135,12 +144,16 @@ for i in range(11, 21):
     val_acc = []
     loss = []
     val_loss = []
-# %%
+    # %%
     for k in range(num_iter):
         print(f"Iteration [{k}] Train Sample Size: {len(x_train)}.")
         # Reset weights
-        model.load_weights(os.path.join(
-            r'D:\Faii\Dataset_flood\model', "activelearning-entropy-resnet50v2(initial).h5"))
+        model.load_weights(
+            os.path.join(
+                r"D:\Faii\Dataset_flood\model",
+                "activelearning-entropy-resnet50v2(initial).h5",
+            )
+        )
 
         # Get callbacks
         model_checkpoint, reduce_lr, early = get_callbacks()
@@ -155,38 +168,39 @@ for i in range(11, 21):
 
         # Train
         history = model.fit(
-            x=x_train, y=y_train,
+            x=x_train,
+            y=y_train,
             validation_data=(x_val, y_val),
             batch_size=32,
             epochs=num_epochs,
-            callbacks=callbacks
+            callbacks=callbacks,
         )
         # Store the history of each iteration
-        acc.append(history.history['accuracy'])
-        val_acc.append(history.history['val_accuracy'])
-        loss.append(history.history['loss'])
-        val_loss.append(history.history['val_loss'])
+        acc.append(history.history["accuracy"])
+        val_acc.append(history.history["val_accuracy"])
+        loss.append(history.history["loss"])
+        val_loss.append(history.history["val_loss"])
 
         # Calculate "U"
         predict_prob = model.predict(x_pool, batch_size=16).flatten()
         # print(predict_prob)
-        entropy1 = (-predict_prob)*np.log(predict_prob)
-        entropy0 = (predict_prob-1)*np.log(1-predict_prob)
+        entropy1 = (-predict_prob) * np.log(predict_prob)
+        entropy0 = (predict_prob - 1) * np.log(1 - predict_prob)
         entropy = entropy1 + entropy0
         entropy[predict_prob <= 1e-6] = 0
-        entropy[predict_prob >= 1-1e-6] = 0
+        entropy[predict_prob >= 1 - 1e-6] = 0
         # print(entropy)
 
         # Add training samples based on "U"
         sorted_indices = np.argsort(entropy)[::-1]
         adding_index = sorted_indices[0:num_add]
-        print(f'there are {y_pool[adding_index].mean()*100:0.2f} % of flooded images.')
+        print(f"there are {y_pool[adding_index].mean()*100:0.2f} % of flooded images.")
         # Add data
         x_train = np.concatenate((x_train, x_pool[adding_index]), axis=0)
         y_train = np.concatenate((y_train, y_pool[adding_index]), axis=0)
         x_pool = np.delete(x_pool, adding_index, axis=0)
         y_pool = np.delete(y_pool, adding_index, axis=0)
-# %%
+    # %%
     list_val_acc = []
     list_val_loss = []
     list_train_acc = []
@@ -212,17 +226,17 @@ for i in range(11, 21):
     plt.show()
     # plt.savefig('D:\Faii\result\Aj.Teerasit\entropy')
 
-    with io.open('en_result_val_acc' + str(i),'wb') as f:
-        pickle.dump(list_val_acc,f)
+    with io.open("en_result_val_acc" + str(i), "wb") as f:
+        pickle.dump(list_val_acc, f)
 
-    with io.open('en_result_val_loss' + str(i),'wb') as f:
-        pickle.dump(list_val_loss,f)
+    with io.open("en_result_val_loss" + str(i), "wb") as f:
+        pickle.dump(list_val_loss, f)
 
-    with io.open('en_result_train_acc' + str(i),'wb') as f:
-        pickle.dump(list_train_acc,f)
+    with io.open("en_result_train_acc" + str(i), "wb") as f:
+        pickle.dump(list_train_acc, f)
 
-    with io.open('en_result_train_loss' + str(i),'wb') as f:
-        pickle.dump(list_train_loss,f)
+    with io.open("en_result_train_loss" + str(i), "wb") as f:
+        pickle.dump(list_train_loss, f)
 
     # clearing session
     del model
